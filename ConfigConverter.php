@@ -25,261 +25,260 @@
  *		$script = makeMultiLang($array);// array('a' => t('中文'));
  *		
 **/
-define('TRANS_FUNC', 't');
-error_reporting(E_ALL);
-define('SEPERATOR', ";");
+include 'array_path.php';
 
-function packExcel($script) {
-	$script = str_replace(':', '::', $script);
-	$script = str_replace(',', ',,', $script);
-	return $script;
-}
+class ConfigConverter {
+    public $seperatorConfig = array(
+        'win_csv' => ',',
+        'mac_csv' => ';',
+        'xls' => "\t",
+        );
 
-function packOutExcel($script) {
-	$script = str_replace('::', ':', $script);
-	$script = str_replace(',,', ',', $script);
-	return $script;
-}
-
-function loadConfig($path) {
-	if (file_exists($path)) {
-		return require $path;
-	}
-}
-
-function encode_file($array, $file_path) {
-    if (!file_exists($file_path)) {
-        touch($file_path);
-    }
-    
-    $content = '';
-    foreach($array as $key => $data) {
-        $content .= "[$key]\n";
-        $content .= csv_encode($data);
-        $content .= "\n";
-    }
-    // echo $content;
-    file_put_contents($file_path, $content);
-}
-
-function csv_encode($array) {
-    
-    $head = array();
-    $record = array();
-    
-    foreach($array as $key => $value) {
-        if (is_array($value)){
-            $head = merge_head($head, gemHead($value, null, array()));
-        } else {
-            $head = array('value');
+    public function __construct() {
+        if (!function_exists('array_path_get')) {
+            throw new Exception('please include array_path first');
         }
     }
-    $head = array_unique($head);
-    
-    $head = array_merge(array('key'), $head);
-    // usort($head, 'key_sort');
-    // var_dump($head);
-    
-    $count = 0;
-    foreach($array as $key => $value) {
-        $line = array();
-        foreach($head as $head_key) {
-            if ($head_key == 'key') {
-                $line[] = '"' . $key . '"';
-                continue;
-            }
-            
-            if ($head_key == 'value') {
-                if (is_array($value)) {
-                    $value = '"' . json_encode($value) . '"';
-                }
-                
-                if ($value === null) {
-                    $line[] = null;
-                } else {
-                    $line[] = '"' . $value . '"';
-                }
-                continue;
-            }
-            
-            $t = getProp($value, $head_key);
-            if (is_array($t)) {
-                $line[] = '"' . str_replace('"','""',json_encode($t)) . '"';
+
+    public function array2table($array) {
+        $head = array();
+        $rows = array();
+        
+        foreach($array as $key => $value) {
+            if (is_array($value)){
+                $head = $this->merge_head($head, $this->gemHead($value, null, array()));
             } else {
-                $line[] = '"' . $t . '"';
+                $head = array('value');
             }
         }
-        $record[$count++] = $line;
-    }
-    
-    $result = array_merge(array($head), $record);
-    $content = '';
-    foreach($result as $line) {
-        $line = implode(SEPERATOR, $line);
-        $line = iconv("utf-8", "gbk", $line);
-        $content .= $line . "\n";
-    }
-    
-    return $content;
-}
 
-function merge_head($head1, $head2) {
-    foreach($head2 as $index => $key) {
-        if (!in_array($key, $head1)) {
-            $head1 = array_insert($head1, $key, $index);
-        }
-    }
-    return $head1;
-}
-
-function array_insert($myarray,$value,$position=0)
-{
-   $fore=($position==0)?array():array_splice($myarray,0,$position);
-   $fore[]=$value;
-   $ret=array_merge($fore,$myarray);
-   return $ret;
-}
-
-function gemHead($array, $prefix=null, $exclude=null) {
-    $head = array();
-    if ($exclude === null) {
-        $exclude = array();
-    }
-    foreach($array as $key => $value) {
-        $add_key = $prefix !== null ? $prefix . '.' .$key : $key;
-
-        if (is_array($value) && !in_array($key, $exclude, true)) {
-            $head = array_merge($head, gemHead($value, $add_key, $exclude));
-        } else {
-            if (!in_array($add_key, $head))$head[] = $add_key;
-        }
-    }
-    return $head;
-}
-
-function csv_decode($file_path) {
-	global $language, $ignoreEmpty;
-    if (empty($ignoreEmpty)) $ignoreEmpty = array();
-	ini_set("auto_detect_line_endings", "1");
-    $fp = fopen($file_path, 'r');
-    $result = array();
-    
-    $head_flag = true;
-    
-    while (($buffer = fgetcsv($fp, 0, SEPERATOR)) !== false) {
-        if (startWith($buffer[0], '//') || $buffer[0] == null || $buffer[0] == "\n") {
-            continue;//ignore comment and break
+        $head = array_unique($head);
+        $head = array_merge(array('key'), $head);
+        foreach($array as $key => $value) {
+            $row = array();
+            foreach($head as $head_key) {
+                switch($head_key) {
+                    case 'key':
+                        $cell = $key;
+                        break;
+                    case 'value':
+                        $cell = $value;
+                        break;
+                    default:
+                        $cell = array_path_get($value, $head_key);
+                        break;
+                }
+                $row[] = $cell;
+            }
+            $rows[] = $row;
         }
         
-//         if (startWith($buffer[0], '[')) {
-//             $current_key = substr($buffer[0], 1, -1);
-//             $head_flag = true;
-//             continue;
-//         }
+        $tableData = array_merge(array($head), $rows);
+
+        return $tableData;
+    }
+
+    public function table2array($tableData) {
+        $result = array();
         
-        if ($head_flag) {
-            $head = $buffer;//explode(',', $buffer);
-            $head_flag = false;
-        } else {
-            $record = $buffer;//explode(',', $buffer);
+        $firstValidRow = true;
+        foreach($tableData as $row) {
+            $firstCell = $row[0];
+            if ($this->startWith($firstCell, '//') 
+                || $firstCell == null 
+                || $firstCell == "\n") 
+                continue;//ignore comment and break
+
+            if ($firstValidRow) {
+                $head = $row;
+                $firstValidRow = false;
+                continue;
+            }
+
             for($i = 0; $i < count($head); $i ++) {
-                if ($head[$i] === null || $head[$i] === '') continue;
-                if (!isset($record[$i])) continue;
-                if ($record[$i] == '' && !in_array($head[$i], $ignoreEmpty)) continue;
-                if ($head[$i] == 'key') {
-                    $key = $record[$i];
+                $headCell = $head[$i];
+                if ($headCell === null || $headCell === '') continue;
+                if (!isset($row[$i])) continue;
+                $cell = $row[$i];
+                if ($cell == '') continue;
+
+                if ($headCell == 'key') {
+                    $key = $cell;
+                    continue;
+                }
+
+                if (is_numeric($cell)) {
+                    $value = $this->getNumber($cell);
                 } else {
-                    if (!isset($record[$i])) $record[$i] = null;
-//                     if (is_numeric($record[$i])) {
-//                         $intval = intval($record[$i]);
-//                         if ($record[$i] == $intval) {
-//                             $record[$i] = intval($record[$i]);
-//                         } else {
-//                             $record[$i] = floatval($record[$i]);
-//                         }
-//                     } else {
-//                         $record[$i] = iconv("gbk", "utf-8", $record[$i]);
-						
-// 						if (preg_match('/[\x7f-\xff]+/', $record[$i])) {
-// 							$language[$record[$i]] = $record[$i];
-// 						}
-//                     }
-                    if (startWith($record[$i], '[') || startWith($record[$i], '{')) {
-                        $record[$i] = json_decode($record[$i], true);
-                    }
-                    
-                    if ($head[$i] == 'value') {
-                        setProp($result, $key, $record[$i]);
-                    } else {
-                        setProp($result, $key .'.'.$head[$i], $record[$i]);
-                    }
+                    $value = iconv("gbk", "utf-8", $cell);
+                }
+
+                if ($this->startWith($cell, '[') 
+                        || $this->startWith($cell, '{')) {
+                    $value = json_decode($cell, true);
+                }
+
+                if ($headCell == 'value') {
+                    array_path_set($result, $key, $value);
+                } else {
+                    array_path_set($result, $key, $headCell, $value);
                 }
             }
         }
+        return $result;
     }
-    
-    fclose($fp);
-    
-    return $result;
-}
 
-function startWith($string, $prefix) {
-    return (strpos($string, $prefix) === 0);
-}
+    public function read($filepath, $format='win_csv') {
+        switch($format) {
+            case 'win_csv':
+            case 'mac_csv':
+            case 'xls':
+                $data = $this->readCSV($filepath, $this->seperatorConfig[$format]);
+                break;
+            case 'php_object':
+            case 'php_array':
+                $data = $this->readPHP($filepath);
+                break;
+            default:
+                throw new Exception('format not supported');
+        }
 
+        return $data;
+    }
 
-function getProp($array, $key) {
-    $params = explode('.', $key);
-    $stack = $array;
-    foreach($params as $param) {
-        if (isset($stack[$param])) {
-            $stack = $stack[$param];
+    public function write($data, $format='win_csv') {
+        switch($format) {
+            case 'win_csv':
+            case 'mac_csv':
+            case 'xls':
+                $content = $this->writeCSV($data, $this->seperatorConfig[$format]);
+                if ($format == 'win_csv') $content = iconv("utf-8", "gbk", $content);
+                break;
+            case 'php_object':
+                $content = $this->writePHP($data, true);
+                break;
+            case 'php_array':
+                $content = $this->writePHP($data, false);
+                break;
+            default:
+                throw new Exception('format not supported');
+        }
+
+        return $content;
+    }
+
+    public function convert($input_file, $input_format, $output_file, $output_format) {
+        $data = $this->read($input_file, $input_format);
+        if (in_array($input_format, array('win_csv', 'mac_csv', 'xls'))
+            && in_array($output_format, array('php_object', 'php_array'))) {
+            $data = $this->table2array($data);
+        } else if (in_array($output_format, array('win_csv', 'mac_csv', 'xls'))
+            && in_array($input_format, array('php_object', 'php_array'))){
+            $data = $this->array2table($data);
+        }
+        $content = $this->write($data, $output_format);
+        file_put_contents($output_file, $content);
+    }
+
+    protected function readCSV($filepath, $seperator=',') {
+        ini_set("auto_detect_line_endings", "1");
+        $fp = fopen($filepath, 'r');
+        $result = array();
+        while (($buffer = fgetcsv($fp, 0, $seperator)) !== false) {
+            $result[] = $buffer;
+        }
+        
+        return $result;
+    }
+
+    protected function readPHP($filepath) {
+        require $filepath;
+        return json_decode(json_encode($config), true);
+    }
+
+    protected function makeStream($string) {
+        $stream = fopen('php://memory','r+');
+        fwrite($stream, $string);
+        rewind($stream);
+        return $stream;
+    }
+    protected function writeCSV($data, $seperator=',') {
+        if (empty($data)) return '';
+        $lines = array();
+        foreach($data as $row) {
+            $line = array();
+            foreach($row as $cell) {
+                if (is_array($cell)) {
+                    $cell = json_encode($cell);
+                }
+                $line[] = '"' . str_replace('"','""',$cell) . '"';
+            }
+            $lines[] = $line;
+        }
+
+        $result = '';
+        foreach($lines as $line) {
+            $result .= implode($seperator, $line);
+            $result .= "\n";
+        }
+
+        return $result;
+    }
+
+    protected function writePHP($data, $makeObject=false) {
+        $script = var_export($data, true);
+        if ($makeObject) {
+            $script = str_replace("array (", "(object)array (", $script);
+        }
+        $content = '<?php $config = ' . $script . ';?>'
+        return $content;
+    }
+    protected function merge_head($head1, $head2) {
+        foreach($head2 as $index => $key) {
+            if (!in_array($key, $head1)) {
+                $head1 = $this->array_insert($head1, $key, $index);
+            }
+        }
+        return $head1;
+    }
+    protected function gemHead($array, $prefix=null, $exclude=null) {
+        $head = array();
+        if ($exclude === null) {
+            $exclude = array();
+        }
+        foreach($array as $key => $value) {
+            $add_key = $prefix !== null ? $prefix . '.' .$key : $key;
+
+            if (is_array($value) && !in_array($key, $exclude, true)) {
+                $head = array_merge($head, $this->gemHead($value, $add_key, $exclude));
+            } else {
+                if (!in_array($add_key, $head))$head[] = $add_key;
+            }
+        }
+        return $head;
+    }
+
+    protected function array_insert($myarray,$value,$position=0)
+    {
+       $fore=($position==0)?array():array_splice($myarray,0,$position);
+       $fore[]=$value;
+       $ret=array_merge($fore,$myarray);
+       return $ret;
+    }
+
+    protected function startWith($string, $prefix) {
+        return (strpos($string, $prefix) === 0);
+    }
+
+    protected function getNumber($value) {
+        if (!is_numeric($value)) return $value;
+        $intval = intval($value);
+        if ($value == $intval) {
+            return $intval;
         } else {
-            return null;
+            return floatval($value);
         }
     }
-    
-    return $stack;
 }
 
-function setProp(&$array, $key, $value) {
-    $params = explode('.', $key);
-    $stack = & $array;
-    foreach($params as $param) {
-        if (isset($stack[$param])) {
-            $stack = & $stack[$param];
-        } else {
-            $stack[$param] = array();
-            $stack = & $stack[$param];
-        }
-    }
-    $stack = $value;
-}
-
-function makeMultiLang($arr) {
-	$script = var_export($arr, true);
-	preg_match_all('/\'.+?\'/', $script, $matches);
-	
-	$all = $matches[0];
-	$all = array_unique($all);
-	foreach($all as $text) {
-		if (preg_match('/[\x7f-\xff]+/', $text)) {
-			$script = str_replace($text, TRANS_FUNC . '('. $text . ')', $script);
-		}
-	}
-	
-	$script = '<?php ' . "\n" . '$config = ' . $script . ';';
-	return $script;
-}
-
-function makeConfigFile($array, $makeObject=true) {
-	$script = "<?php  \nreturn  ";
-	
-	$script .= var_export($array,true).";\n";
-	$script .= "?>";
-	if ($makeObject)
-		$script = str_replace("array (", "(object)array (", $script);
-	
-	return $script;
-}
 ?>
