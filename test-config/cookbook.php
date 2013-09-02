@@ -1,12 +1,12 @@
 <?php $config = array (
   100 => 
   array (
-    'id' => 100,
+    'id' => 10011,
     'materials' => 
     array (
       0 => 
       array (
-        'id' => 200023423,
+        'id' => 2000,
         'qty' => 1,
         'type' => 'goods',
       ),

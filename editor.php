@@ -15,23 +15,42 @@ switch ($action) {
 
 		$converter = new ConfigConverter();
 		$data = $converter->read($wholePath, 'win_csv');
+        echo json_encode($data);
+        exit;
 		break;
 	case 'save':
+        $pathinfo = pathinfo($filename);
+        $base = $pathinfo['filename'];
+
 		$converter = new ConfigConverter();
 		$data = $_REQUEST['data'];
+
+        $content = $converter->write($data, 'win_csv');
+        file_put_contents(CSV_PATH . $base . '.csv', $content);
+
 		$array = $converter->table2array($data);
 		$content = $converter->write($array, 'php_array');
-		file_put_contents(CONFIG_PATH . 'cookbook.php', $content);
+		file_put_contents(CONFIG_PATH . $base . '.php', $content);
 		echo 'ok';
-		die();
+		exit;
 		break;
 	case 'download':
 		# code...
 		break;
 	case 'upload':
-		# code...
+		
 		break;
 	default:
+        $fileList = scandir(CSV_PATH);
+        $csvList = array();
+        foreach($fileList as $file){
+            $pi = pathinfo($file);
+            if(isset($pi['extension'])){
+                if(strtolower($pi['extension']) == 'csv'){
+                    array_push($csvList, $file);
+                }
+            }
+        }
 		break;
 }
 
@@ -54,7 +73,7 @@ switch ($action) {
 </head>
 <style>
 	body {
-		#padding-top: 30px;
+		#padding-top: 20px;
 	}
     .handsontable .currentRow {
       background-color: #E7E8EF;
@@ -67,8 +86,14 @@ switch ($action) {
 <body>
 	<div class="container-fluid" style="margin:20px;">
 		<div class="row">
-<div class="col-md-12">
-	<h2>Config Converter</h2>
+<div class="col-md-2">
+    <div class="list-group">
+        <?php foreach($csvList as $file) { ?>
+  <a href="#" class="list-group-item" onclick="viewCSV('<?php echo $file;?>')"><?php echo $file;?></a>
+  <?php } ?>
+</div>
+</div>
+<div class="col-md-10">
 	<form class="form-inline" role="form" action="" enctype="multipart/form-data" id="right" method="post">
 	<div class="form-group">
 	<input type="file" id="csv_file" name="file">
@@ -77,9 +102,9 @@ switch ($action) {
 	<button type="submit" class="btn btn-primary"><span class="glyphicon glyphicon-open"></span> Upload</button>
 	<a class="btn btn-primary" href="?action=download"><span class="glyphicon glyphicon-download-alt"></span> Download</a>
 	
-	</form>
-	<button class="btn btn-primary" id="saveBtn" onclick="postTable();return false;"><span class="glyphicon glyphicon-download-alt"></span> Save</button>
-<div id="dataTable" style="overflow:auto;height:200px;margin-top:10px;"></div>
+	<button class="btn btn-primary" id="saveBtn" onclick="postTable('<?php echo $file;?>');return false;"><span class="glyphicon glyphicon-floppy-disk"></span> Save</button>
+    </form>
+<div id="dataTable" style="overflow:auto;height:600px;margin-top:10px;"></div>
 
 <div id="textConsole"/>
 </div>
@@ -94,9 +119,7 @@ switch ($action) {
 <script src="handsontable/jquery.handsontable.full.js"></script>
 
 <script>
-  var data = <?php 
-  echo json_encode($data);
-?>;
+  var data = [];
   $("#dataTable").handsontable({
     data: data,
     rowHeaders: true,
@@ -113,11 +136,30 @@ switch ($action) {
   });
 
 var $console = $('#textConsole');
+var handsontable = $("#dataTable").data('handsontable');
+var viewfile = '';
+
+function viewCSV(filename) {
+    $.ajax({
+    url : 'editor.php',
+    data: {"filename": filename, 'action':'view'}, //returns all cells' data
+    dataType: 'json',
+    type: 'POST',
+    success: function (res) {
+      // $console.text(res);
+      handsontable.loadData(res);
+      viewfile = filename;
+    },
+    error: function () {
+      $console.text('Request error.');
+    }
+  });
+}
 
 function postTable() {
   $.ajax({
   	url : 'editor.php',
-    data: {"data": $("#dataTable").data('handsontable').getData(), 'action':'save'}, //returns all cells' data
+    data: {"data": handsontable.getData(), "filename": viewfile, "action":'save'}, //returns all cells' data
     dataType: 'text',
     type: 'POST',
     success: function (res) {
