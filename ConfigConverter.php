@@ -25,6 +25,7 @@
  *		$script = makeMultiLang($array);// array('a' => t('中文'));
  *		
 **/
+define('ARRAY_PATH_SEPERATOR', '.');
 include 'array_path.php';
 
 class ConfigConverter {
@@ -192,7 +193,8 @@ class ConfigConverter {
     }
 
     protected function readPHP($filepath) {
-        require $filepath;
+        define('SYS_PATH', '');
+        $config = require $filepath;
         return json_decode(json_encode($config), true);
     }
 
@@ -230,7 +232,7 @@ class ConfigConverter {
         if ($makeObject) {
             $script = str_replace("array (", "(object)array (", $script);
         }
-        $content = '<?php $config = ' . $script . ';?>'
+        $content = '<?php $config = ' . $script . ';?>';
         return $content;
     }
     protected function merge_head($head1, $head2) {
