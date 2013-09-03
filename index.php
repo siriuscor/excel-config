@@ -1,6 +1,8 @@
 <?php
 session_start();
 
+
+
 require 'ConfigConverter.php';
 $action = isset($_REQUEST['action']) ? $_REQUEST['action'] : null;
 $side = isset($_REQUEST['side']) ? $_REQUEST['side'] : null;
