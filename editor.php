@@ -25,10 +25,11 @@ switch ($action) {
 		$converter = new ConfigConverter();
 		$data = $_REQUEST['data'];
 
-        $content = $converter->write($data, 'win_csv');
-        file_put_contents(CSV_PATH . $base . '.csv', $content);
+    $content = $converter->write($data, 'win_csv');
+    file_put_contents(CSV_PATH . $base . '.csv', $content);
 
-		$array = $converter->table2array($data);
+    $tablizer = new Tablizer();
+		$array = $tablizer->untablize($data);
 		$content = $converter->write($array, 'php_array');
 		file_put_contents(CONFIG_PATH . $base . '.php', $content);
 		echo 'ok';

@@ -72,6 +72,11 @@
       'experience' => 20,
       'item' => '2010::1,,2002::2',
     ),
+    'addition' => 
+    array (
+      'item' => 'addid',
+      'amount' => 2,
+    ),
   ),
   3 => 
   array (
@@ -143,6 +148,35 @@
     array (
       'coins' => 40,
       'experience' => 40,
+    ),
+  ),
+  'test' => 
+  array (
+    'key' => 
+    array (
+      'id' => 'key1',
+      'level' => 
+      array (
+        'min' => 'key2',
+      ),
+    ),
+  ),
+  'first' => 
+  array (
+    'id' => 'fk1',
+    'level' => 
+    array (
+      'min' => 'fk2',
+    ),
+  ),
+  5 => 
+  array (
+    'task' => 
+    array (
+      1 => 
+      array (
+        'item' => 1,
+      ),
     ),
   ),
 );?>
