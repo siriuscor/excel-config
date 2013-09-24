@@ -15,12 +15,12 @@ switch ($action) {
 
 		$converter = new ConfigConverter();
 		$data = $converter->read($wholePath, 'win_csv');
-        echo json_encode($data);
-        exit;
+    echo json_encode($data);
+    exit;
 		break;
 	case 'save':
-        $pathinfo = pathinfo($filename);
-        $base = $pathinfo['filename'];
+    $pathinfo = pathinfo($filename);
+    $base = $pathinfo['filename'];
 
 		$converter = new ConfigConverter();
 		$data = $_REQUEST['data'];
@@ -42,16 +42,16 @@ switch ($action) {
 		
 		break;
 	default:
-        $fileList = scandir(CSV_PATH);
-        $csvList = array();
-        foreach($fileList as $file){
-            $pi = pathinfo($file);
-            if(isset($pi['extension'])){
-                if(strtolower($pi['extension']) == 'csv'){
-                    array_push($csvList, $file);
-                }
+    $fileList = scandir(CSV_PATH);
+    $csvList = array();
+    foreach($fileList as $file){
+        $pi = pathinfo($file);
+        if(isset($pi['extension'])){
+            if(strtolower($pi['extension']) == 'csv'){
+                array_push($csvList, $file);
             }
         }
+    }
 		break;
 }
 
@@ -88,11 +88,11 @@ switch ($action) {
 	<div class="container-fluid" style="margin:20px;">
 		<div class="row">
 <div class="col-md-2">
-    <div class="list-group">
-        <?php foreach($csvList as $file) { ?>
+  <div class="list-group">
+  <?php foreach($csvList as $file) { ?>
   <a href="#" class="list-group-item" onclick="viewCSV('<?php echo $file;?>')"><?php echo $file;?></a>
   <?php } ?>
-</div>
+  </div>
 </div>
 <div class="col-md-10">
 	<form class="form-inline" role="form" action="" enctype="multipart/form-data" id="right" method="post">
@@ -103,7 +103,9 @@ switch ($action) {
 	<button type="submit" class="btn btn-primary"><span class="glyphicon glyphicon-open"></span> Upload</button>
 	<a class="btn btn-primary" href="?action=download"><span class="glyphicon glyphicon-download-alt"></span> Download</a>
 	
-	<button class="btn btn-primary" id="saveBtn" onclick="postTable('<?php echo $file;?>');return false;"><span class="glyphicon glyphicon-floppy-disk"></span> Save</button>
+	<button class="btn btn-primary" id="saveBtn" onclick="postTable('<?php echo $file;?>');return false;" data-loading-text="Saving...">
+    <span class="glyphicon glyphicon-floppy-disk"></span> Save
+  </button>
     </form>
 <div id="dataTable" style="overflow:auto;height:600px;margin-top:10px;"></div>
 
@@ -124,16 +126,17 @@ switch ($action) {
   $("#dataTable").handsontable({
     data: data,
     rowHeaders: true,
-	colHeaders: true,
+    colHeaders: true,
     startRows: 6,
     startCols: 8,
     stretchH: 'all',
     contextMenu: true,
     currentRowClassName: 'currentRow',
-	currentColClassName: 'currentCol',
+    currentColClassName: 'currentCol',
     fixedRowsTop: 1,
-  	fixedColumnsLeft: 1,
-  	minSpareRows: 1
+    fixedColumnsLeft: 1,
+  	minSpareRows: 1,
+    manualColumnResize: true,
   });
 
 var $console = $('#textConsole');
@@ -158,6 +161,7 @@ function viewCSV(filename) {
 }
 
 function postTable() {
+  $('#saveBtn').button('loading');
   $.ajax({
   	url : 'editor.php',
     data: {"data": handsontable.getData(), "filename": viewfile, "action":'save'}, //returns all cells' data
@@ -166,6 +170,7 @@ function postTable() {
     success: function (res) {
       if (res === 'ok') {
         $console.text('Data saved');
+        $('#saveBtn').button('reset');
       }
       else {
         $console.text('Save error');

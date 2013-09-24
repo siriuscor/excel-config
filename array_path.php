@@ -138,6 +138,8 @@ function array_path_walk(&$array, $func, $prefix='') {
 function array_path_parse($args) {
 	$path = array();
 	foreach($args as $arg) {
+		//TODO:process with escape char
+
 		$path = array_merge($path, explode(ARRAY_PATH_SEPERATOR, $arg));
 	}
 	return $path;

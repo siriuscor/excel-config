@@ -1,30 +1,9 @@
 <?php
 /**
  * @author siriuscor@gmail.com
- * 
- * 2013-6-28 change csv to xls file
- *	a tool convert csv file to PHP array
- *	sample:
- *		$file = '../doc/item.csv';
- *		$array = csv_decode($file);
- *		
- *	also can convert PHP array to csv file
- *	默认第一级为配置名称,第二级为列
- *	例: $config['skillConfig'] = array('skill_001' => array('name'=>'abc', 'level'=>1));
- *	生成csv为
- *	skill_001,abc,1
- *	
- *	sample:
- *		$array = array(...);
- *		encode_file($array, '../doc/arr.csv');
- *	
- *	make a multi_lang script config file:
- *	multi_lang func define as TRANS_FUNC
- *	sample:
- *		$array = array('a' => '中文');
- *		$script = makeMultiLang($array);// array('a' => t('中文'));
- *		
-**/
+ **/
+
+//TODO: save xls file
 include 'Tablizer.php';
 
 class ConfigConverter {

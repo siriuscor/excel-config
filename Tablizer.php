@@ -1,13 +1,13 @@
 <?php
 define('ARRAY_PATH_SEPERATOR', '.');
 include 'array_path.php';
-
+//TODO: save meta data
 class Tablizer {
     const COMMENT_MARK = '//';
     const KEY_MARK = 'key';
     const VALUE_MARK = 'value';
 
-    private $keywords = array(self::COMMENT_MARK, self::KEY_MARK, self::VALUE_MARK);
+    private $keywords = array(self::COMMENT_MARK, self::KEY_MARK, self::VALUE_MARK, ARRAY_PATH_SEPERATOR);
 
     public function __construct() {
         if (!function_exists('array_path_get')) {
@@ -61,20 +61,32 @@ class Tablizer {
             if ($firstCell == null || $firstCell == "\n") 
                 continue;//ignore break
 
-            if ($row[0] == self::KEY_MARK) {
+            //match *.key,but not match *\.key
+            if ($row[0] == self::KEY_MARK
+                || preg_match('/^(.*[^\\\\])\.'.self::KEY_MARK .'$/', $row[0], $matches)) {
                 $head = $row;
+                if (!empty($matches[1])) {
+                    $prepend_key = $matches[1];
+                } else {
+                    $prepend_key = '';
+                }
                 continue;
             }
 
             for($i = 0; $i < count($row); $i ++) {
-                $headCell = $head[$i];
-                if ($headCell === null || $headCell === '') continue;
+                //empty cell skip
                 if (!isset($row[$i])) continue;
                 $cell = $row[$i];
                 if ($cell == '') continue;
-
                 //row comment,ignore follows
                 if ($this->startWith($cell, self::COMMENT_MARK)) break;
+                
+                //if no head info, skip
+                if (empty($head)) continue;
+                $headCell = $head[$i];
+                //empty head skip
+                if ($headCell === null || $headCell === '') continue;
+                
                 if ($i == 0) {
                     $key = $cell;
                     continue;
@@ -95,9 +107,9 @@ class Tablizer {
                 }
 
                 if ($headCell == self::VALUE_MARK) {
-                    array_path_set($result, $key, $value);
+                    array_path_set($result, $prepend_key, $key, $value);
                 } else {
-                    array_path_set($result, $key, $headCell, $value);
+                    array_path_set($result, $prepend_key, $key, $headCell, $value);
                 }
             }
         }
