@@ -2,6 +2,7 @@
 define('ARRAY_PATH_SEPERATOR', '.');
 include 'array_path.php';
 //TODO: save meta data
+//TODO: add ignore empty
 class Tablizer {
     const COMMENT_MARK = '//';
     const KEY_MARK = 'key';
