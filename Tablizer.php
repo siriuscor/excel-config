@@ -9,11 +9,13 @@ class Tablizer {
     const VALUE_MARK = 'value';
 
     private $keywords = array(self::COMMENT_MARK, self::KEY_MARK, self::VALUE_MARK, ARRAY_PATH_SEPERATOR);
+    public $ignoreEmpty;
 
     public function __construct() {
         if (!function_exists('array_path_get')) {
             throw new Exception('tablizer need include array_path first');
         }
+        $this->ignoreEmpty = array();
     }
 
     public function tablize($array, &$tableMeta=null) {
@@ -63,33 +65,40 @@ class Tablizer {
                 continue;//ignore break
 
             //match *.key,but not match *\.key
-            if ($row[0] == self::KEY_MARK
-                || preg_match('/^(.*[^\\\\])\.'.self::KEY_MARK .'$/', $row[0], $matches)) {
+            if (//$row[0] == self::KEY_MARK
+                // || preg_match('/^(.*[^\\\\])\.'.self::KEY_MARK .'$/', $row[0], $matches)
+                preg_match('/' . self::KEY_MARK. '/', $row[0])
+                ) {
                 $head = $row;
-                if (!empty($matches[1])) {
-                    $prepend_key = $matches[1];
-                } else {
-                    $prepend_key = '';
-                }
                 continue;
             }
 
+            $key = '';//empty key
             for($i = 0; $i < count($row); $i ++) {
                 //empty cell skip
                 if (!isset($row[$i])) continue;
                 $cell = $row[$i];
-                if ($cell == '') continue;
-                //row comment,ignore follows
-                if ($this->startWith($cell, self::COMMENT_MARK)) break;
                 
                 //if no head info, skip
                 if (empty($head)) continue;
                 $headCell = $head[$i];
                 //empty head skip
                 if ($headCell === null || $headCell === '') continue;
-                
-                if ($i == 0) {
-                    $key = $cell;
+
+                //ignore empty cell or in ignore empty
+                if ($cell == '' && !in_array($headCell, $this->ignoreEmpty)) continue;
+                //row comment,ignore follows
+                if ($this->startWith($cell, self::COMMENT_MARK)) break;
+
+                //first column to be array key, to support multi-key column
+                if (preg_match('/' . self::KEY_MARK. '/', $headCell)) {
+                // if ($i == 0) {
+                    $singleKey = str_replace(self::KEY_MARK, $cell, $headCell);
+                    if (empty($key)) {
+                        $key = $singleKey;
+                    } else {
+                        $key .= ARRAY_PATH_SEPERATOR . $singleKey;
+                    }
                     continue;
                 }
 
@@ -108,9 +117,9 @@ class Tablizer {
                 }
 
                 if ($headCell == self::VALUE_MARK) {
-                    array_path_set($result, $prepend_key, $key, $value);
+                    array_path_set($result, $key, $value);
                 } else {
-                    array_path_set($result, $prepend_key, $key, $headCell, $value);
+                    array_path_set($result, $key, $headCell, $value);
                 }
             }
         }

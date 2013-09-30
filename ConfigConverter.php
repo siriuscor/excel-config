@@ -75,6 +75,10 @@ class ConfigConverter {
         $fp = fopen($filepath, 'r');
         $result = array();
         while (($buffer = fgetcsv($fp, 0, $seperator)) !== false) {
+            foreach($buffer as &$cell) {
+                $cell = str_replace('::', ':', $cell);
+                $cell = str_replace(',,', ',', $cell);
+            }
             $result[] = $buffer;
         }
         
@@ -102,7 +106,10 @@ class ConfigConverter {
                 if (is_array($cell)) {
                     $cell = json_encode($cell);
                 }
-                $line[] = '"' . str_replace('"','""',$cell) . '"';
+                $cell = str_replace(':', '::', $cell);
+                $cell = str_replace(',', ',,', $cell);
+                $cell = str_replace('"', '""', $cell);
+                $line[] = '"' . $cell . '"';
             }
             $lines[] = $line;
         }
@@ -121,7 +128,7 @@ class ConfigConverter {
         if ($makeObject) {
             $script = str_replace("array (", "(object)array (", $script);
         }
-        $content = '<?php $config = ' . $script . ';?>';
+        $content = '<?php return ' . $script . ';?>';
         return $content;
     }
 

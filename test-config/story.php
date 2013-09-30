@@ -1,8 +1,4 @@
-<?php  
-return  (object)array(
-
-##### =================== expand ===================== ##### 
-
+<?php  return  (object)array(
   '5900023' => 
   (object)array(
      'attributes' => 
