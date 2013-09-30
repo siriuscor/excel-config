@@ -1,8 +1,10 @@
 <?php
+namespace tablizer;
+
 define('ARRAY_PATH_SEPERATOR', '.');
 include 'array_path.php';
 //TODO: save meta data
-//TODO: add ignore empty
+//TODO: escape keyword
 class Tablizer {
     const COMMENT_MARK = '//';
     const KEY_MARK = 'key';
@@ -11,11 +13,11 @@ class Tablizer {
     private $keywords = array(self::COMMENT_MARK, self::KEY_MARK, self::VALUE_MARK, ARRAY_PATH_SEPERATOR);
     public $ignoreEmpty;
 
-    public function __construct() {
+    public function __construct($ignoreEmpty=array()) {
         if (!function_exists('array_path_get')) {
             throw new Exception('tablizer need include array_path first');
         }
-        $this->ignoreEmpty = array();
+        $this->ignoreEmpty = $ignoreEmpty;
     }
 
     public function tablize($array, &$tableMeta=null) {

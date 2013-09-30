@@ -8,7 +8,15 @@ $outputFile = 'test-config/story-extend.php';
 // $pathinfo = pathinfo($filename);
 // $base = $pathinfo['filename'];
 
-$converter = new ConfigConverter();
+$converter = new tablizer\ConfigConverter();
+// $csvStream = new tablizer\CSVStream(';');
+// $phpStream = new tablizer\PHPStream();
+// $data = $converter->filterChain($inputFile, array($csvStream, $phpStream));
+$converter->ignoreEmpty = array('rewards.reward.0.attributes.will_share', 'results.attributes.description');
+// var_dump($data);
+$converter->convertFile($inputFile, 'mac_csv', $outputFile, 'php_object');
+// die();
+/*
 $data = $converter->read($inputFile, 'mac_csv');
 
 // $content = $converter->write($data, 'mac_csv');
@@ -23,7 +31,7 @@ $data = $tablizer->untablize($data);
 
 $content = $converter->write($data, 'php_object');
 file_put_contents($outputFile, $content);
-
+*/
 // die();
 //test
 $origin = 'test-config/story.php';
