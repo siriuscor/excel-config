@@ -66,11 +66,8 @@ class Tablizer {
             if ($firstCell == null || $firstCell == "\n") 
                 continue;//ignore break
 
-            //match *.key,but not match *\.key
-            if (//$row[0] == self::KEY_MARK
-                // || preg_match('/^(.*[^\\\\])\.'.self::KEY_MARK .'$/', $row[0], $matches)
-                preg_match('/' . self::KEY_MARK. '/', $row[0])
-                ) {
+            //match *key*,but not match *\.key
+            if (preg_match('/' . self::KEY_MARK. '/', $row[0])) {
                 $head = $row;
                 continue;
             }
