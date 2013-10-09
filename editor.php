@@ -36,7 +36,19 @@ switch ($action) {
 		exit;
 		break;
 	case 'download':
-		# code...
+    $wholePath = CSV_PATH . $filename;
+		if (file_exists($wholePath)) {
+      header('Content-Description: File Transfer');
+      header('Content-Type: application/octet-stream');
+      header('Content-Disposition: attachment; filename='.basename($wholePath));
+      header('Content-Transfer-Encoding: binary');
+      header('Expires: 0');
+      header('Cache-Control: must-revalidate');
+      header('Pragma: public');
+      header('Content-Length: ' . filesize($wholePath));
+      readfile($wholePath);
+      exit;
+    }
 		break;
 	case 'upload':
 		
@@ -76,32 +88,37 @@ switch ($action) {
 	body {
 		#padding-top: 20px;
 	}
-    .handsontable .currentRow {
-      background-color: #E7E8EF;
-    }
+  .handsontable .currentRow {
+    background-color: #E7E8EF;
+  }
 
-    .handsontable .currentCol {
-      background-color: #F9F9FB;
-    }
+  .handsontable .currentCol {
+    background-color: #F9F9FB;
+  }
 </style>
 <body>
 	<div class="container-fluid" style="margin:20px;">
 		<div class="row">
 <div class="col-md-2">
+  <div class="panel panel-info">
+  <div class="panel-heading">Files</div>
   <div class="list-group">
   <?php foreach($csvList as $file) { ?>
   <a href="#" class="list-group-item" onclick="viewCSV('<?php echo $file;?>')"><?php echo $file;?></a>
   <?php } ?>
   </div>
 </div>
+
+  
+</div>
 <div class="col-md-10">
 	<form class="form-inline" role="form" action="" enctype="multipart/form-data" id="right" method="post">
-	<div class="form-group">
+<!-- 	<div class="form-group">
 	<input type="file" id="csv_file" name="file">
 	<input type="hidden" name="action" value="upload"/>
-	</div>
-	<button type="submit" class="btn btn-primary"><span class="glyphicon glyphicon-open"></span> Upload</button>
-	<a class="btn btn-primary" href="?action=download"><span class="glyphicon glyphicon-download-alt"></span> Download</a>
+	</div> -->
+	<!-- <button type="submit" class="btn btn-primary"><span class="glyphicon glyphicon-open"></span> Upload</button> -->
+	<button class="btn btn-primary"><span class="glyphicon glyphicon-download-alt"></span> Download</button>
 	
 	<button class="btn btn-primary" id="saveBtn" onclick="postTable('<?php echo $file;?>');return false;" data-loading-text="Saving...">
     <span class="glyphicon glyphicon-floppy-disk"></span> Save
@@ -120,7 +137,6 @@ switch ($action) {
 <!-- Latest compiled and minified JavaScript -->
 <script src="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
 <script src="handsontable/jquery.handsontable.full.js"></script>
-
 <script>
   var data = [];
   $("#dataTable").handsontable({
