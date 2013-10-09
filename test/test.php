@@ -1,8 +1,8 @@
 <?php
 
-include 'ConfigConverter.php';
-$inputFile = 'test-csv/story-extend.csv';
-$outputFile = 'test-config/story-extend.php';
+require '../ConfigConverter.php';
+$inputFile = 'story-extend.csv';
+$outputFile = 'story-extend.php';
 
 // $filename = $inputFile;
 // $pathinfo = pathinfo($filename);
@@ -34,7 +34,7 @@ file_put_contents($outputFile, $content);
 */
 // die();
 //test
-$origin = 'test-config/story.php';
+$origin = 'story.php';
 $originData = require $origin;
 $originSign = md5(json_encode($originData));
 echo $originSign . "\n";

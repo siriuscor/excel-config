@@ -1,10 +1,14 @@
 <?php
 /**
- * @author siriuscor@gmail.com
+ * config converter
+ * @author Sirius Lee <siriuscor@gmail.com>
+ * @link https://github.com/siriuscor/excel-config
  **/
 namespace tablizer;
-include 'Tablizer.php';
-
+require 'Tablizer.php';
+/**
+ * config converter class
+ */
 class ConfigConverter {
 
     public $seperatorConfig = array(
@@ -23,7 +27,7 @@ class ConfigConverter {
         }
         $pass = $file;
         $writer = array_pop($chain);
-        foreach($chain as $chainItem) {
+        foreach ($chain as $chainItem) {
             $pass = $chainItem->read($pass);
         }
         return $writer->write($pass);
@@ -55,7 +59,7 @@ class ConfigConverter {
             && in_array($output_format, array('php_object', 'php_array'))) {
             $chain[] = new UntablizeStream($this->ignoreEmpty);
         } else if (in_array($output_format, array('win_csv', 'mac_csv', 'xls'))
-            && in_array($input_format, array('php_object', 'php_array'))){
+            && in_array($input_format, array('php_object', 'php_array'))) {
             $chain[] = new TablizeStream($this->ignoreEmpty);
         }
 
@@ -70,7 +74,7 @@ class ConfigConverter {
 
 interface Stream {
     public function read($data);
-    public function write($data); 
+    public function write($data);
 }
 
 class PHPStream implements Stream{
@@ -109,7 +113,7 @@ class CSVStream implements Stream {
         $fp = fopen($filepath, 'r');
         $result = array();
         while (($buffer = fgetcsv($fp, 0, $this->seperator)) !== false) {
-            foreach($buffer as &$cell) {
+            foreach ($buffer as &$cell) {
                 $cell = str_replace('::', ':', $cell);
                 $cell = str_replace(',,', ',', $cell);
             }
@@ -122,9 +126,9 @@ class CSVStream implements Stream {
     public function write($data) {
         if (empty($data)) return '';
         $lines = array();
-        foreach($data as $row) {
+        foreach ($data as $row) {
             $line = array();
-            foreach($row as $cell) {
+            foreach ($row as $cell) {
                 if (is_array($cell)) {
                     $cell = json_encode($cell);
                 }
@@ -137,7 +141,7 @@ class CSVStream implements Stream {
         }
 
         $result = '';
-        foreach($lines as $line) {
+        foreach ($lines as $line) {
             $result .= implode($this->seperator, $line);
             $result .= "\n";
         }
@@ -185,7 +189,7 @@ class MemoryStream implements Stream {
 
     }
     protected function makeStream($string) {
-        $stream = fopen('php://memory','r+');
+        $stream = fopen('php://memory', 'r+');
         fwrite($stream, $string);
         rewind($stream);
         return $stream;
