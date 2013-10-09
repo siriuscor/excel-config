@@ -3,7 +3,6 @@ namespace tablizer;
 
 define('ARRAY_PATH_SEPERATOR', '.');
 include 'array_path.php';
-//TODO: save meta data
 //TODO: escape keyword
 class Tablizer {
     const COMMENT_MARK = '//';
@@ -20,37 +19,49 @@ class Tablizer {
         $this->ignoreEmpty = $ignoreEmpty;
     }
 
-    public function tablize($array, &$tableMeta=null) {
+    public function tablize($array, $tableMeta=null) {
         $head = array();
         $rows = array();
         
-        foreach($array as $key => $value) {
-            if (is_array($value)){
-                $head = $this->merge_head($head, $this->gemHead($value, null, array()));
-            } else {
-                $head = array(self::VALUE_MARK);
+        if (empty($tableMeta)) {
+            foreach($array as $key => $value) {
+                if (is_array($value)){
+                    $head = $this->merge_head($head, $this->gemHead($value, null, array()));
+                } else {
+                    $head = array(self::VALUE_MARK);
+                }
             }
+
+            $head = array_unique($head);
+            $head = array_merge(array(self::KEY_MARK), $head);
         }
 
-        $head = array_unique($head);
-        $head = array_merge(array(self::KEY_MARK), $head);
-        foreach($array as $key => $value) {
-            $row = array();
-            foreach($head as $head_key) {
-                switch($head_key) {
-                    case self::KEY_MARK:
-                        $cell = $key;
-                        break;
-                    case self::VALUE_MARK:
-                        $cell = $value;
-                        break;
-                    default:
-                        $cell = array_path_get($value, $head_key);
-                        break;
+        foreach($tableMeta as $tableHead) {
+            foreach($tableHead as $headCell) {
+                $row = array();
+                // $keyPart = '';
+                if ($this->isKey($headCell)) {
+                    $keyPart = array_path_parse($headCell);
+                    foreach($keyPart as $part) {
+                        
+                    }
                 }
-                $row[] = $cell;
+                // foreach($array as $key => $value) {
+                //     switch($head_key) {
+                //         case self::KEY_MARK:
+                //             $cell = $key;
+                //             break;
+                //         case self::VALUE_MARK:
+                //             $cell = $value;
+                //             break;
+                //         default:
+                //             $cell = array_path_get($value, $head_key);
+                //             break;
+                //     }
+                //     $row[] = $cell;
+                // }
+                $rows[] = $row;
             }
-            $rows[] = $row;
         }
         
         $tableData = array_merge(array($head), $rows);
@@ -58,17 +69,20 @@ class Tablizer {
         return $tableData;
     }
 
-    public function untablize($tableData, $tableMeta=null) {
+    public function untablize($tableData, &$tableMeta=null) {
         $result = array();
         
+        $metaData = array();
+
         foreach($tableData as $row) {
             $firstCell = $row[0];
             if ($firstCell == null || $firstCell == "\n") 
                 continue;//ignore break
 
             //match *key*,but not match *\.key
-            if (preg_match('/' . self::KEY_MARK. '/', $row[0])) {
+            if ($this->isKey($row[0])) {
                 $head = $row;
+                $metaData[] = $head;//save meta data
                 continue;
             }
 
@@ -90,9 +104,8 @@ class Tablizer {
                 if ($this->startWith($cell, self::COMMENT_MARK)) break;
 
                 //first column to be array key, to support multi-key column
-                if (preg_match('/' . self::KEY_MARK. '/', $headCell)) {
-                // if ($i == 0) {
-                    $singleKey = str_replace(self::KEY_MARK, $cell, $headCell);
+                if ($this->isKey($headCell)) {
+                    $singleKey = $this->combineKey($headCell, $cell);
                     if (empty($key)) {
                         $key = $singleKey;
                     } else {
@@ -122,7 +135,18 @@ class Tablizer {
                 }
             }
         }
+
+        //output meta data
+        $tableMeta = $metaData;
         return $result;
+    }
+
+    protected function isKey($value) {
+        return preg_match('/' . self::KEY_MARK. '/', $value);
+    }
+
+    protected function combineKey($head, $value) {
+        return str_replace(self::KEY_MARK, $value, $head);
     }
 
     protected function merge_head($head1, $head2) {
@@ -150,11 +174,10 @@ class Tablizer {
         return $head;
     }
 
-    protected function array_insert($myarray,$value,$position=0)
-    {
-       $fore=($position==0)?array():array_splice($myarray,0,$position);
-       $fore[]=$value;
-       $ret=array_merge($fore,$myarray);
+    protected function array_insert($myarray, $value, $position=0) {
+       $fore = ($position == 0) ? array() : array_splice($myarray, 0, $position);
+       $fore[] = $value;
+       $ret = array_merge($fore, $myarray);
        return $ret;
     }
 

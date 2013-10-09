@@ -37,8 +37,11 @@ class ConfigConverter {
         switch($format) {
             case 'win_csv':
             case 'mac_csv':
-            case 'xls':
                 return new CSVStream($this->seperatorConfig[$format]);
+                break;
+            case 'xls':
+            case 'xlsx':
+                return new ExcelStream();
                 break;
             case 'php_object':
                 return new PHPStream(true);
@@ -55,11 +58,13 @@ class ConfigConverter {
         $chain = array();
         $chain[] = $this->detectStream($input_format);
 
-        if (in_array($input_format, array('win_csv', 'mac_csv', 'xls'))
-            && in_array($output_format, array('php_object', 'php_array'))) {
+        $tablizeFormat = array('win_csv', 'mac_csv', 'xls', 'xlsx');
+        $untablizeFormat = array('php_object', 'php_array');
+        if (in_array($input_format, $tablizeFormat)
+            && in_array($output_format, $untablizeFormat)) {
             $chain[] = new UntablizeStream($this->ignoreEmpty);
-        } else if (in_array($output_format, array('win_csv', 'mac_csv', 'xls'))
-            && in_array($input_format, array('php_object', 'php_array'))) {
+        } else if (in_array($output_format, $tablizeFormat)
+            && in_array($input_format, $untablizeFormat)) {
             $chain[] = new TablizeStream($this->ignoreEmpty);
         }
 
@@ -151,12 +156,11 @@ class CSVStream implements Stream {
 }
 
 class TablizeStream implements Stream {
-    private $ignoreEmpty;
-    public function __construct($ignoreEmpty) {
-        $this->ignoreEmpty = $ignoreEmpty;
+    public function __construct() {
     }
+    
     public function read($data) {
-        $tablizer = new Tablizer($this->ignoreEmpty);
+        $tablizer = new Tablizer();
         return $tablizer->tablize($data);
     }
 
@@ -172,7 +176,9 @@ class UntablizeStream implements Stream {
     }
     public function read($data) {
         $tablizer = new Tablizer($this->ignoreEmpty);
-        return $tablizer->untablize($data);
+        $metaData = array();
+        $result = $tablizer->untablize($data, $metaData);
+        return $result;
     }
 
     public function write($data) {
@@ -180,6 +186,9 @@ class UntablizeStream implements Stream {
     }
 }
 
+/**
+ * class not complish
+ */
 class MemoryStream implements Stream {
     public function read($data) {
 
@@ -193,6 +202,32 @@ class MemoryStream implements Stream {
         fwrite($stream, $string);
         rewind($stream);
         return $stream;
+    }
+}
+
+
+class ExcelStream implements Stream {
+    public function __construct() {
+        require('spreadsheet-reader/php-excel-reader/excel_reader2.php');
+        require('spreadsheet-reader/SpreadsheetReader.php');
+    }
+
+    public function read($filepath) {
+        $reader = new \SpreadsheetReader($filepath);
+        $result = array();
+        foreach ($reader as $row) {
+            foreach ($row as &$cell) {
+                $cell = str_replace('::', ':', $cell);
+                $cell = str_replace(',,', ',', $cell);
+            }
+            $result[] = $row;
+        }
+
+        return $result;
+    }
+
+    public function write($data) {
+        throw new Exception('not implement yet');
     }
 }
 
