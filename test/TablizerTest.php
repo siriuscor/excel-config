@@ -47,20 +47,19 @@ $array = array(
 $tablizer = new tablizer\Tablizer();
 
 $newArray = $tablizer->tablize($array, $tableMeta);
-compareArray($array, $newArray);
+compareArray($table, $newArray);
 
 function compareArray($array1, $array2) {
-	array_path_walk($array1, function($path, $value) {
-	global $array2;
-	if (!array_path_isset($array2, $path)) {
-		echo "$path not set\n";
-		return;
-	}
-	$newValue = array_path_get($array2, $path);
-	if ($newValue != $value) {
-		echo "$path not equal $value:$newValue\n";
-		return;
-	}
-});
+	array_path_walk($array1, function($path, $value) use ($array2) {
+		if (!array_path_isset($array2, $path)) {
+			echo "$path not set\n";
+			return;
+		}
+		$newValue = array_path_get($array2, $path);
+		if ($newValue != $value) {
+			echo "$path not equal $value:$newValue\n";
+			return;
+		}
+	});
 }
 ?>

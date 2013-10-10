@@ -4,6 +4,7 @@ namespace tablizer;
 define('ARRAY_PATH_SEPERATOR', '.');
 include 'array_path.php';
 //TODO: escape keyword
+//TODO: cell process hook
 class Tablizer {
     const COMMENT_MARK = '//';
     const KEY_MARK = 'key';
@@ -20,9 +21,6 @@ class Tablizer {
     }
 
     public function tablize($array, $tableMeta=null) {
-        $head = array();
-        $rows = array();
-        
         if (empty($tableMeta)) {
             foreach($array as $key => $value) {
                 if (is_array($value)){
@@ -34,38 +32,97 @@ class Tablizer {
 
             $head = array_unique($head);
             $head = array_merge(array(self::KEY_MARK), $head);
+            $tableMeta[] = $head;
         }
+        $tableData = array();
 
         foreach($tableMeta as $tableHead) {
+            $keyColumn = array();
+            $valueColumn = array();
             foreach($tableHead as $headCell) {
-                $row = array();
-                // $keyPart = '';
                 if ($this->isKey($headCell)) {
-                    $keyPart = array_path_parse($headCell);
-                    foreach($keyPart as $part) {
-                        
+                    $keyColumn[] = $headCell;
+                } else {
+                    $valueColumn[] = $headCell;
+                }
+            }
+
+            if (empty($keyColumn)) {
+                throw new Exception('not have key column');
+            }
+            
+            //extract key tree
+            $keyLeft = '';
+            $keyTree = array();
+            foreach($keyColumn as $index => $keyCell) {
+                $processArray = $array;
+                
+                if (!empty($keyLeft)) $keyCell .= ARRAY_PATH_SEPERATOR . $keyLeft;
+                $keyPart = preg_split('/' . self::KEY_MARK . '/', $keyCell);
+                $path = '';
+                foreach($keyPart as $part) {
+                    if ($this->endWith($part, ARRAY_PATH_SEPERATOR)) {
+                        $part = substr($part, 0, strlen($part) - strlen(ARRAY_PATH_SEPERATOR));
+                        $processArray = array_path_get($processArray, $part);
+                    }
+
+                    if ($this->startWith($part, ARRAY_PATH_SEPERATOR)) {
+                        $keyLeft = substr($part, strlen(ARRAY_PATH_SEPERATOR));
                     }
                 }
-                // foreach($array as $key => $value) {
-                //     switch($head_key) {
-                //         case self::KEY_MARK:
-                //             $cell = $key;
-                //             break;
-                //         case self::VALUE_MARK:
-                //             $cell = $value;
-                //             break;
-                //         default:
-                //             $cell = array_path_get($value, $head_key);
-                //             break;
+
+                // function growKeyTree(&$node, $level, $array) {
+                //     global $keyColumn;
+                //     foreach($node as $keyNode => &$childKeys) {
+                //         $path = $this->combineKey($keyColumn[$level], $keyNode);
+                //         $childKeys = array_keys(array_path_get($array, $path));
                 //     }
-                //     $row[] = $cell;
                 // }
-                $rows[] = $row;
+
+                if (empty($keyTree)) {
+                    $keys = array_keys($processArray);
+                    $keyTree = array_fill_keys($keys, 0);
+                } else {
+                    //TODO:infinite level
+                    $level = 0;
+                    // while($level < $index) {
+                    //     growKeyTree($keyTree, $level, $processArray);
+                    //     $level ++;
+                    // }
+                    foreach($keyTree as $keyNode => &$childKeys) {
+                        $path = $this->combineKey($keyColumn[$level], $keyNode);
+                        $childKeys = array_fill_keys(array_keys(array_path_get($processArray, $path)), 0);
+                    }
+                }
+
+                // var_dump($keyTree);
             }
+            
+            $rows = array();
+            $self = $this;
+            array_path_walk($keyTree, function($key, $value) use (&$rows, $keyColumn, $valueColumn, $array, $self) {
+                $row = array();
+                $keys = explode(ARRAY_PATH_SEPERATOR, $key);
+
+                $row = $keys;
+
+                foreach($keys as $index => $keyCell) {
+                    $parts[] = $self->combineKey($keyColumn[$index], $keyCell);
+                }
+                $wholeKey = implode(ARRAY_PATH_SEPERATOR, $parts);
+
+                $node = array_path_get($array, $wholeKey);
+
+                foreach($valueColumn as $head) {
+                    $row[] = array_path_get($node, $head);
+                }
+
+                $rows[] = $row;
+            });
+
+            $tableData = array_merge($tableData, array($tableHead), $rows);
         }
         
-        $tableData = array_merge(array($head), $rows);
-
         return $tableData;
     }
 
@@ -145,7 +202,7 @@ class Tablizer {
         return preg_match('/' . self::KEY_MARK. '/', $value);
     }
 
-    protected function combineKey($head, $value) {
+    public function combineKey($head, $value) {
         return str_replace(self::KEY_MARK, $value, $head);
     }
 
@@ -183,6 +240,10 @@ class Tablizer {
 
     protected function startWith($string, $prefix) {
         return (strpos($string, $prefix) === 0);
+    }
+
+    protected function endWith($string, $suffix) {
+        return (strpos($string, $suffix) === strlen($string));
     }
 
     protected function getNumber($value) {

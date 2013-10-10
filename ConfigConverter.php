@@ -9,6 +9,7 @@ require 'Tablizer.php';
 /**
  * config converter class
  */
+//TODO: make file streamly
 class ConfigConverter {
 
     public $seperatorConfig = array(
@@ -158,7 +159,7 @@ class CSVStream implements Stream {
 class TablizeStream implements Stream {
     public function __construct() {
     }
-    
+
     public function read($data) {
         $tablizer = new Tablizer();
         return $tablizer->tablize($data);

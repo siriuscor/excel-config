@@ -23,8 +23,7 @@ $originData = json_decode(json_encode($originData), true);
 $newData = json_decode(json_encode($newData), true);
 
 //compare two array
-array_path_walk($originData, function($path, $value) {
-	global $newData;
+array_path_walk($originData, function($path, $value) use ($newData) {
 	if (!array_path_isset($newData, $path)) {
 		echo "$path not set\n";
 		return;
