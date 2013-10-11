@@ -209,8 +209,8 @@ class MemoryStream implements Stream {
 
 class ExcelStream implements Stream {
     public function __construct() {
-        require('spreadsheet-reader/php-excel-reader/excel_reader2.php');
-        require('spreadsheet-reader/SpreadsheetReader.php');
+        require_once('spreadsheet-reader/php-excel-reader/excel_reader2.php');
+        require_once('spreadsheet-reader/SpreadsheetReader.php');
     }
 
     public function read($filepath) {

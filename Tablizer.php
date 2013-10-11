@@ -22,6 +22,7 @@ class Tablizer {
 
     public function tablize($array, $tableMeta=null) {
         if (empty($tableMeta)) {
+            $head = array();
             foreach($array as $key => $value) {
                 if (is_array($value)){
                     $head = $this->merge_head($head, $this->gemHead($value, null, array()));
@@ -34,6 +35,7 @@ class Tablizer {
             $head = array_merge(array(self::KEY_MARK), $head);
             $tableMeta[] = $head;
         }
+
         $tableData = array();
 
         foreach($tableMeta as $tableHead) {
@@ -48,7 +50,7 @@ class Tablizer {
             }
 
             if (empty($keyColumn)) {
-                throw new Exception('not have key column');
+                throw new \Exception('not have key column');
             }
             
             //extract key tree
@@ -220,7 +222,7 @@ class Tablizer {
             $exclude = array();
         }
         foreach($array as $key => $value) {
-            $add_key = $prefix !== null ? $prefix . '.' .$key : $key;
+            $add_key = $prefix !== null ? $prefix . ARRAY_PATH_SEPERATOR .$key : $key;
 
             if (is_array($value) && !in_array($key, $exclude, true)) {
                 $head = array_merge($head, $this->gemHead($value, $add_key, $exclude));
@@ -228,6 +230,7 @@ class Tablizer {
                 if (!in_array($add_key, $head))$head[] = $add_key;
             }
         }
+
         return $head;
     }
 
