@@ -5,6 +5,7 @@ define('ARRAY_PATH_SEPERATOR', '.');
 include 'array_path.php';
 //TODO: escape keyword
 //TODO: cell process hook
+//TODO: compatible with simple key-value
 class Tablizer {
     const COMMENT_MARK = '//';
     const KEY_MARK = 'key';
@@ -14,9 +15,6 @@ class Tablizer {
     public $ignoreEmpty;
 
     public function __construct($ignoreEmpty=array()) {
-        if (!function_exists('array_path_get')) {
-            throw new Exception('tablizer need include array_path first');
-        }
         $this->ignoreEmpty = $ignoreEmpty;
     }
 
@@ -42,7 +40,7 @@ class Tablizer {
             $keyColumn = array();
             $valueColumn = array();
             foreach($tableHead as $headCell) {
-                if ($this->isKey($headCell)) {
+                if ($this->isKey($headCell)) {//TODO:check two KEY keyword
                     $keyColumn[] = $headCell;
                 } else {
                     $valueColumn[] = $headCell;
@@ -93,16 +91,19 @@ class Tablizer {
                     // }
                     foreach($keyTree as $keyNode => &$childKeys) {
                         $path = $this->combineKey($keyColumn[$level], $keyNode);
+                        var_dump($path);
                         $childKeys = array_fill_keys(array_keys(array_path_get($processArray, $path)), 0);
                     }
                 }
 
-                // var_dump($keyTree);
+                var_dump($keyTree);
             }
+            die();
             
             $rows = array();
             $self = $this;
             array_path_walk($keyTree, function($key, $value) use (&$rows, $keyColumn, $valueColumn, $array, $self) {
+                //TODO:VALUE KEYWORD
                 $row = array();
                 $keys = explode(ARRAY_PATH_SEPERATOR, $key);
 
@@ -165,7 +166,7 @@ class Tablizer {
                 //first column to be array key, to support multi-key column
                 if ($this->isKey($headCell)) {
                     $singleKey = $this->combineKey($headCell, $cell);
-                    if (empty($key)) {
+                    if ($key === '') {
                         $key = $singleKey;
                     } else {
                         $key .= ARRAY_PATH_SEPERATOR . $singleKey;
@@ -201,7 +202,11 @@ class Tablizer {
     }
 
     protected function isKey($value) {
-        return preg_match('/' . self::KEY_MARK. '/', $value);
+        $matchTimes = preg_match_all('/\b' . self::KEY_MARK. '\b/', $value);
+        if ($matchTimes > 1) {
+            throw new Exception('1 column can only have 1 key');
+        }
+        return $matchTimes;
     }
 
     public function combineKey($head, $value) {

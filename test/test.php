@@ -1,14 +1,14 @@
 <?php
 
 require '../ConfigConverter.php';
-$inputFile = 'story-extend.xlsx';
-$outputFile = 'story-extend.php';
+$inputFile = 'b_order.xlsx';//'story-extend.xlsx';
+$outputFile = 'b_order.php';//'story-extend.php';
 
 $converter = new tablizer\ConfigConverter();
 $converter->ignoreEmpty = array('rewards.reward.0.attributes.will_share', 'results.attributes.description');
 $converter->convertFile($inputFile, 'xlsx', $outputFile, 'php_object');
 
-
+die();
 //test
 $origin = 'story.php';
 $originData = require $origin;

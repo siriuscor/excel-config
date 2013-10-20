@@ -2,7 +2,7 @@
 require '../Tablizer.php';
 
 $table = array(
-	array('key.task', 'key.attr', 'name'),
+	array('key.task.a', 'task.key.attr', 'name'),
 	array('100', '0', 'test100-0'),
 	array('100', '1', 'test100-1'),
 	array('101', '0', 'test101-0'),

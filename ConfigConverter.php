@@ -51,7 +51,7 @@ class ConfigConverter {
                 return new PHPStream();
                 break;
             default:
-                throw new Exception('format not supported');
+                throw new \Exception('format not supported');
         }
     }
 
