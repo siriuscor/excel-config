@@ -18,6 +18,26 @@ class Tablizer {
         $this->ignoreEmpty = $ignoreEmpty;
     }
 
+    //TODO: very slow, need optimize
+    private function growKeyTree(&$node, $keyParts, $partIndex, $array) {
+        if (!isset($keyParts[$partIndex])) return;
+        $part = $keyParts[$partIndex];
+        if ($part != self::KEY_MARK) {
+            $this->growKeyTree($node, $keyParts, $partIndex + 1, array_path_get($array, $part));
+        } else {
+            if (empty($node)) {
+                $child = array_keys($array);
+                $node = array_fill_keys($child, 0);
+            }
+
+            foreach($node as $keyNode => &$childKeys) {
+                $subArray = array_path_get($array, $keyNode);
+                $this->growKeytree($childKeys, $keyParts, $partIndex + 1, $subArray);
+            }
+            
+        }
+    }
+
     public function tablize($array, $tableMeta=null) {
         if (empty($tableMeta)) {
             $head = array();
@@ -40,7 +60,7 @@ class Tablizer {
             $keyColumn = array();
             $valueColumn = array();
             foreach($tableHead as $headCell) {
-                if ($this->isKey($headCell)) {//TODO:check two KEY keyword
+                if ($this->isKey($headCell)) {
                     $keyColumn[] = $headCell;
                 } else {
                     $valueColumn[] = $headCell;
@@ -51,55 +71,11 @@ class Tablizer {
                 throw new \Exception('not have key column');
             }
             
-            //extract key tree
-            $keyLeft = '';
-            $keyTree = array();
-            foreach($keyColumn as $index => $keyCell) {
-                $processArray = $array;
-                
-                if (!empty($keyLeft)) $keyCell .= ARRAY_PATH_SEPERATOR . $keyLeft;
-                $keyPart = preg_split('/' . self::KEY_MARK . '/', $keyCell);
-                $path = '';
-                foreach($keyPart as $part) {
-                    if ($this->endWith($part, ARRAY_PATH_SEPERATOR)) {
-                        $part = substr($part, 0, strlen($part) - strlen(ARRAY_PATH_SEPERATOR));
-                        $processArray = array_path_get($processArray, $part);
-                    }
 
-                    if ($this->startWith($part, ARRAY_PATH_SEPERATOR)) {
-                        $keyLeft = substr($part, strlen(ARRAY_PATH_SEPERATOR));
-                    }
-                }
-
-                // function growKeyTree(&$node, $level, $array) {
-                //     global $keyColumn;
-                //     foreach($node as $keyNode => &$childKeys) {
-                //         $path = $this->combineKey($keyColumn[$level], $keyNode);
-                //         $childKeys = array_keys(array_path_get($array, $path));
-                //     }
-                // }
-
-                if (empty($keyTree)) {
-                    $keys = array_keys($processArray);
-                    $keyTree = array_fill_keys($keys, 0);
-                } else {
-                    //TODO:infinite level
-                    $level = 0;
-                    // while($level < $index) {
-                    //     growKeyTree($keyTree, $level, $processArray);
-                    //     $level ++;
-                    // }
-                    foreach($keyTree as $keyNode => &$childKeys) {
-                        $path = $this->combineKey($keyColumn[$level], $keyNode);
-                        var_dump($path);
-                        $childKeys = array_fill_keys(array_keys(array_path_get($processArray, $path)), 0);
-                    }
-                }
-
-                var_dump($keyTree);
-            }
-            die();
+            $keyParts = explode(ARRAY_PATH_SEPERATOR,implode(ARRAY_PATH_SEPERATOR, $keyColumn));
             
+            $this->growKeytree($keyTree, $keyParts, 0, $array);
+
             $rows = array();
             $self = $this;
             array_path_walk($keyTree, function($key, $value) use (&$rows, $keyColumn, $valueColumn, $array, $self) {
@@ -202,7 +178,8 @@ class Tablizer {
     }
 
     protected function isKey($value) {
-        $matchTimes = preg_match_all('/\b' . self::KEY_MARK. '\b/', $value);
+        $matchTimes = preg_match_all('/\b' . self::KEY_MARK. '\b/', $value, $unuse);
+        //check two KEY keyword
         if ($matchTimes > 1) {
             throw new Exception('1 column can only have 1 key');
         }
