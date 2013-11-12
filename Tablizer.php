@@ -3,45 +3,43 @@ namespace tablizer;
 
 define('ARRAY_PATH_SEPERATOR', '.');
 include 'array_path.php';
+/**
+ * use for tablize and untablize array data
+ */
 //TODO: escape keyword
-//TODO: cell process hook
 //TODO: compatible with simple key-value
 class Tablizer {
     const COMMENT_MARK = '//';
     const KEY_MARK = 'key';
     const VALUE_MARK = 'value';
 
-    private $keywords = array(self::COMMENT_MARK, self::KEY_MARK, self::VALUE_MARK, ARRAY_PATH_SEPERATOR);
-    public $ignoreEmpty;
+    private $_keywords = array(self::COMMENT_MARK, self::KEY_MARK, self::VALUE_MARK, ARRAY_PATH_SEPERATOR);
+    private $_ignoreEmpty;
+    private $_tablizeCallback;
+    private $_untablizeCallback;
 
     public function __construct($ignoreEmpty=array()) {
-        $this->ignoreEmpty = $ignoreEmpty;
+        $this->_ignoreEmpty = $ignoreEmpty;
     }
 
-    //TODO: very slow, need optimize
-    private function growKeyTree(&$node, $keyParts, $partIndex, $array) {
-        if (!isset($keyParts[$partIndex])) return;
-        $part = $keyParts[$partIndex];
-        if ($part != self::KEY_MARK) {
-            $this->growKeyTree($node, $keyParts, $partIndex + 1, array_path_get($array, $part));
-        } else {
-            if (empty($node)) {
-                $child = array_keys($array);
-                $node = array_fill_keys($child, 0);
-            }
-
-            foreach($node as $keyNode => &$childKeys) {
-                $subArray = array_path_get($array, $keyNode);
-                $this->growKeytree($childKeys, $keyParts, $partIndex + 1, $subArray);
-            }
-            
+    public function onTablize($func) {
+        if (!is_callable($func)) {
+            throw new \Exception('function type error');
         }
+        $this->_tablizeCallback = $func;
+    }
+
+    public function onUntablize($func) {
+        if (!is_callable($func)) {
+            throw new \Exception('function type error');
+        }
+        $this->_untablizeCallback = $func;
     }
 
     public function tablize($array, $tableMeta=null) {
         if (empty($tableMeta)) {
             $head = array();
-            foreach($array as $key => $value) {
+            foreach ($array as $key => $value) {
                 if (is_array($value)){
                     $head = $this->merge_head($head, $this->gemHead($value, null, array()));
                 } else {
@@ -56,10 +54,10 @@ class Tablizer {
 
         $tableData = array();
 
-        foreach($tableMeta as $tableHead) {
+        foreach ($tableMeta as $tableHead) {
             $keyColumn = array();
             $valueColumn = array();
-            foreach($tableHead as $headCell) {
+            foreach ($tableHead as $headCell) {
                 if ($this->isKey($headCell)) {
                     $keyColumn[] = $headCell;
                 } else {
@@ -72,27 +70,27 @@ class Tablizer {
             }
             
 
-            $keyParts = explode(ARRAY_PATH_SEPERATOR,implode(ARRAY_PATH_SEPERATOR, $keyColumn));
+            $keyParts = explode(ARRAY_PATH_SEPERATOR, implode(ARRAY_PATH_SEPERATOR, $keyColumn));
             
             $this->growKeytree($keyTree, $keyParts, 0, $array);
 
             $rows = array();
             $self = $this;
-            array_path_walk($keyTree, function($key, $value) use (&$rows, $keyColumn, $valueColumn, $array, $self) {
+            array_path_walk ($keyTree, function ($key, $value) use (&$rows, $keyColumn, $valueColumn, $array, $self) {
                 //TODO:VALUE KEYWORD
                 $row = array();
                 $keys = explode(ARRAY_PATH_SEPERATOR, $key);
 
                 $row = $keys;
 
-                foreach($keys as $index => $keyCell) {
+                foreach ($keys as $index => $keyCell) {
                     $parts[] = $self->combineKey($keyColumn[$index], $keyCell);
                 }
                 $wholeKey = implode(ARRAY_PATH_SEPERATOR, $parts);
 
                 $node = array_path_get($array, $wholeKey);
 
-                foreach($valueColumn as $head) {
+                foreach ($valueColumn as $head) {
                     $row[] = array_path_get($node, $head);
                 }
 
@@ -175,6 +173,26 @@ class Tablizer {
         //output meta data
         $tableMeta = $metaData;
         return $result;
+    }
+
+    //TODO: very slow, need optimize
+    private function growKeyTree(&$node, $keyParts, $partIndex, $array) {
+        if (!isset($keyParts[$partIndex])) return;
+        $part = $keyParts[$partIndex];
+        if ($part != self::KEY_MARK) {
+            $this->growKeyTree($node, $keyParts, $partIndex + 1, array_path_get($array, $part));
+        } else {
+            if (empty($node)) {
+                $child = array_keys($array);
+                $node = array_fill_keys($child, 0);
+            }
+
+            foreach($node as $keyNode => &$childKeys) {
+                $subArray = array_path_get($array, $keyNode);
+                $this->growKeytree($childKeys, $keyParts, $partIndex + 1, $subArray);
+            }
+            
+        }
     }
 
     protected function isKey($value) {
