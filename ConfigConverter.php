@@ -9,11 +9,11 @@ require 'Tablizer.php';
 /**
  * config converter class
  */
-//TODO: make file streamly
 class ConfigConverter {
 
     public $seperatorConfig = array(
         'win_csv' => ',',
+        'csv' => ',',
         'mac_csv' => ';',
         'xls' => "\t",
         );
@@ -38,6 +38,7 @@ class ConfigConverter {
         switch($format) {
             case 'win_csv':
             case 'mac_csv':
+            case 'csv':
                 return new CSVStream($this->seperatorConfig[$format]);
                 break;
             case 'xls':
@@ -47,6 +48,7 @@ class ConfigConverter {
             case 'php_object':
                 return new PHPStream(true);
                 break;
+            case 'php':
             case 'php_array':
                 return new PHPStream();
                 break;
@@ -55,12 +57,17 @@ class ConfigConverter {
         }
     }
 
+    public function read($path, $format) {
+        $stream = $this->detectStream($format);
+        return $stream->read($path);
+    }
+
     public function convertFile($input_file, $input_format, $output_file, $output_format) {
         $chain = array();
         $chain[] = $this->detectStream($input_format);
 
-        $tablizeFormat = array('win_csv', 'mac_csv', 'xls', 'xlsx');
-        $untablizeFormat = array('php_object', 'php_array');
+        $tablizeFormat = array('win_csv', 'mac_csv', 'xls', 'xlsx', 'csv');
+        $untablizeFormat = array('php', 'php_object', 'php_array');
         if (in_array($input_format, $tablizeFormat)
             && in_array($output_format, $untablizeFormat)) {
             $chain[] = new UntablizeStream($this->ignoreEmpty);
@@ -91,9 +98,9 @@ class PHPStream implements Stream{
 
     public function read($filepath) {
         if (!file_exists($filepath)) {
-            throw new Exception('file not exist');
+            throw new \Exception('file not exist');
         }
-        define('SYS_PATH', '');
+        if (!defined('SYS_PATH')) define('SYS_PATH', '');
         $config = require $filepath;
         return json_decode(json_encode($config), true);
     }
@@ -172,7 +179,7 @@ class TablizeStream implements Stream {
 
 class UntablizeStream implements Stream {
     private $ignoreEmpty;
-    public function __construct($ignoreEmpty) {
+    public function __construct($ignoreEmpty=array()) {
         $this->ignoreEmpty = $ignoreEmpty;
     }
     public function read($data) {
