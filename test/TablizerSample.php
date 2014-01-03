@@ -9,9 +9,19 @@ $table = array(
 	array('101', '0', 'test101-0'),
 
     //can use mutliple head in one table
+    //can use '//' as comment mark to ignore follow cells
+    array('//some comment'),
     array('key.task', 'key.attr', 'name'),
 	array('101', '1', 'test101-1'),
 	);
+
+$comparetable = array(
+    array('key.task', 'key.attr', 'name'),
+    array('100', '0', 'test100-0'),
+    array('100', '1', 'test100-1'),
+    array('101', '0', 'test101-0'),
+    array('101', '1', 'test101-1'),
+    );
 
 //use tableMeta to specify table head when needed
 $tableMeta = array(
@@ -61,7 +71,7 @@ $untableCB = function($head, &$value, $row) {
     $value = str_replace('-', '_', $value);
 };
 $newTable = $tablizer->tablize($array, $tableMeta, $tableCB);
-compareArray($table, $newTable);
+compareArray($comparetable, $newTable);
 $newArray = $tablizer->untablize($table, $newMeta, $untableCB);
 compareArray($array, $newArray);
 
