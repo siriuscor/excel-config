@@ -4,25 +4,27 @@ namespace tablizer;
 define('ARRAY_PATH_SEPERATOR', '.');
 include dirname(__FILE__) . '/array_path.php';
 //TODO: escape keyword
-//TODO: compatible with simple key-value
 class Tablizer {
     const COMMENT_MARK = '//';
     const KEY_MARK = 'key';
     const VALUE_MARK = 'value';
 
     private $keywords = array(self::COMMENT_MARK, self::KEY_MARK, self::VALUE_MARK, ARRAY_PATH_SEPERATOR);
-    public $ignoreEmpty;
-    public $onTablize;
-    public $onUntablize;
 
-    public function __construct($ignoreEmpty=array()) {
+    public function __construct() {
         if (!function_exists('array_path_get')) {
             throw new Exception('tablizer need include array_path first');
         }
-        $this->ignoreEmpty = $ignoreEmpty;
     }
 
-    public function tablize($array, $tableMeta=null) {
+    /**
+     * convert array to a 2-dimesion table array
+     * @param array data to convert
+     * @param tableMeta use this to fixed table head
+     * @param callback function($path, &$value) use it hook process every cell
+     */
+    public function tablize($array, $tableMeta=null, $callback=null) {
+
         if (empty($tableMeta)) {
             $head = array();
             foreach($array as $key => $value) {
@@ -75,36 +77,21 @@ class Tablizer {
                     }
                 }
 
-                // function growKeyTree(&$node, $level, $array) {
-                //     global $keyColumn;
-                //     foreach($node as $keyNode => &$childKeys) {
-                //         $path = $this->combineKey($keyColumn[$level], $keyNode);
-                //         $childKeys = array_keys(array_path_get($array, $path));
-                //     }
-                // }
-
                 if (empty($keyTree)) {
                     $keys = array_keys($processArray);
                     $keyTree = array_fill_keys($keys, 0);
                 } else {
-                    //TODO:infinite level
                     $level = 0;
-                    // while($level < $index) {
-                    //     growKeyTree($keyTree, $level, $processArray);
-                    //     $level ++;
-                    // }
                     foreach($keyTree as $keyNode => &$childKeys) {
                         $path = $this->combineKey($keyColumn[$level], $keyNode);
                         $childKeys = array_fill_keys(array_keys(array_path_get($processArray, $path)), 0);
                     }
                 }
-
-                // var_dump($keyTree);
             }
             
             $rows = array();
             $self = $this;
-            array_path_walk($keyTree, function($key, $value) use (&$rows, $keyColumn, $valueColumn, $array, $self) {
+            array_path_walk($keyTree, function($key, $value) use (&$rows, $keyColumn, $valueColumn, $array, $self, $callback) {
                 $row = array();
                 $keys = explode(ARRAY_PATH_SEPERATOR, $key);
 
@@ -119,10 +106,8 @@ class Tablizer {
 
                 foreach($valueColumn as $head) {
                     $value = array_path_get($node, $head);
-                    if ($value === true) $value = 'true';
-                    if ($value === false) $value = 'false';
-                    if ($self->onTablize) {//enable callback
-                        $self->onTablize($wholeKey, $value);
+                    if (!empty($callback) && is_callable($callback)) {
+                        $callback($wholeKey, $value);
                     }
                     $row[] = $value;
                 }
@@ -136,7 +121,14 @@ class Tablizer {
         return $tableData;
     }
 
-    public function untablize($tableData, &$tableMeta=null) {
+    /**
+     * convert table data to a tree construction array
+     * @param tableData data to convert
+     * @param tableMeta will store meta data in this variable
+     * @param callback function($headCell, &$value, $row)
+     * returns false will NOT process cell
+     */
+    public function untablize($tableData, &$tableMeta=null, $callback=null) {
         $result = array();
         
         $metaData = array();
@@ -158,21 +150,28 @@ class Tablizer {
 
             $key = '';//empty key
             for($i = 0; $i < count($row); $i ++) {
-                //empty cell skip
-                if (!isset($row[$i])) continue;
-                $cell = $row[$i];
-                
-                //if no head info, skip
-                if (empty($head)) continue;
-                if (!isset($head[$i])) continue;
-                $headCell = $head[$i];
-                //empty head skip
-                if ($headCell === null || $headCell === '') continue;
+                $cell = isset($row[$i])? $row[$i] : '';
 
-                //ignore empty cell or in ignore empty
-                if ($cell == '' && !in_array($headCell, $this->ignoreEmpty)) continue;
+                //TODO:should do this in spreadsheet lib
+                if ($this->startWith($cell, '\'')) $cell = substr($cell, 1);
+
                 //row comment,ignore follows
                 if ($this->startWith($cell, self::COMMENT_MARK)) break;
+                //if no head info, skip
+                if (empty($head)) continue;
+                $headCell = isset($head[$i]) ? $head[$i] : '';
+
+                $customFlag = null;
+                if (!empty($callback) && is_callable($callback)) {
+                    $customFlag = $callback($headCell, $cell, $row);
+                }
+
+                if ($customFlag === false) continue;
+
+                //empty head skip or empty cell skip
+                if ($customFlag === null) {//default action
+                    if ($headCell === '' || $cell === '') continue;
+                }
 
                 //first column to be array key, to support multi-key column
                 if ($this->isKey($headCell)) {
@@ -189,9 +188,6 @@ class Tablizer {
                     $value = $this->getNumber($cell);
                 } else {
                     $value = $cell;
-                    if ($this->startWith($cell, '\'')) {
-                        $value = substr($value, 1);
-                    }
                 }
 
                 if ($this->startWith($cell, '[') 
@@ -200,11 +196,6 @@ class Tablizer {
                     if ($value == null) {
                         $value = $cell; //fallback
                     }
-                }
-
-                if ($this->onUntablize) {
-                    $method = $this->onUntablize;
-                    $method($key . ARRAY_PATH_SEPERATOR . $headCell, $value);
                 }
 
                 if ($headCell == self::VALUE_MARK) {

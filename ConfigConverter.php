@@ -9,6 +9,7 @@ require 'Tablizer.php';
 /**
  * config converter class
  */
+//TODO: make file streamly
 class ConfigConverter {
 
     public $seperatorConfig = array(

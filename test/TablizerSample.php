@@ -1,14 +1,19 @@
 <?php
 require '../Tablizer.php';
 
+//can use multiple key column in table data
 $table = array(
 	array('key.task', 'key.attr', 'name'),
 	array('100', '0', 'test100-0'),
 	array('100', '1', 'test100-1'),
 	array('101', '0', 'test101-0'),
+
+    //can use mutliple head in one table
+    array('key.task', 'key.attr', 'name'),
 	array('101', '1', 'test101-1'),
 	);
 
+//use tableMeta to specify table head when needed
 $tableMeta = array(
 	array('key.task', 'key.attr', 'name'),
 	);
@@ -18,12 +23,12 @@ $array = array(
 		'task' => array(
 			0 => array(
 				'attr' => array(
-					'name' => 'test100-0',
+					'name' => 'test100_0',
 					),
 				),
 			1 => array(
 				'attr' => array(
-					'name' => 'test100-1',
+					'name' => 'test100_1',
 					),
 				),
 		),
@@ -32,12 +37,12 @@ $array = array(
 		'task' => array(
 			0 => array(
 				'attr' => array(
-					'name' => 'test101-0',
+					'name' => 'test101_0',
 					),
 				),
 			1 => array(
 				'attr' => array(
-					'name' => 'test101-1',
+					'name' => 'test101_1',
 					),
 				),
 		),
@@ -46,8 +51,19 @@ $array = array(
 
 $tablizer = new tablizer\Tablizer();
 
-$newArray = $tablizer->tablize($array, $tableMeta);
-compareArray($table, $newArray);
+//use hook to change tablize/untablize behavior custome
+//use reference to change the value when tablize
+$tableCB = function($key, &$value) {
+    $value = str_replace('_', '-', $value);
+};
+
+$untableCB = function($head, &$value, $row) {
+    $value = str_replace('-', '_', $value);
+};
+$newTable = $tablizer->tablize($array, $tableMeta, $tableCB);
+compareArray($table, $newTable);
+$newArray = $tablizer->untablize($table, $newMeta, $untableCB);
+compareArray($array, $newArray);
 
 function compareArray($array1, $array2) {
 	array_path_walk($array1, function($path, $value) use ($array2) {

@@ -1,11 +1,11 @@
 excel-config
 ============
 
-convert php array to tablized data
-or oppsite flow
+convert php array to table data(refer as 'Tablize')
+or oppsite flow(refer as 'Untablize')
 commonly used in convert excel file to php config file
 
-sample:
+Sample:
 
 	$data = array(
 				2 => array('item1' => 1, 'item2' => 2),
@@ -23,3 +23,5 @@ sample:
 
 	//follow will turn it back
 	$data = $tablizer->untablize($table);
+
+more samples see test/TablizerSample
